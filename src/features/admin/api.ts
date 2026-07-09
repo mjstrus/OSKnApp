@@ -2,6 +2,32 @@ import { supabase } from "@/lib/supabase";
 import type { ZasobyOsk } from "@/engine/capacity";
 import type { DaneKursu } from "./CourseForm";
 
+// ---------------------------------------------------------------------------
+// Audit log akcji admina — kto i kiedy zatwierdził/usunął (dla sporów z klientem).
+// ---------------------------------------------------------------------------
+
+let cachedOskId: string | null = null;
+
+async function mojOskId(): Promise<string | null> {
+  if (cachedOskId) return cachedOskId;
+  const { data } = await supabase.from("membership").select("osk_id").limit(1).maybeSingle();
+  cachedOskId = (data?.osk_id as string | undefined) ?? null;
+  return cachedOskId;
+}
+
+/** Fire-and-forget: logowanie nigdy nie blokuje ani nie wywraca głównej akcji. */
+async function logujAkcje(akcja: string, szczegoly?: Record<string, unknown>): Promise<void> {
+  const oskId = await mojOskId();
+  if (!oskId) return;
+  await supabase
+    .from("admin_audit_log")
+    .insert({ osk_id: oskId, akcja, szczegoly: szczegoly ?? null })
+    .then(
+      () => {},
+      () => {},
+    );
+}
+
 export interface KursRow {
   id: string;
   nazwa: string;
@@ -101,6 +127,7 @@ export async function closeEnrollment(courseId: string): Promise<void> {
     .update({ zapisy_otwarte: false })
     .eq("id", courseId);
   if (error) throw error;
+  void logujAkcje("zamkniecie_zapisow", { courseId });
 }
 
 /** Generuje/przegenerowuje grafik teorii (R6) — osobny krok po zamknięciu zapisów. */
@@ -176,6 +203,7 @@ export async function approveApplication(applicationId: string): Promise<void> {
     body: { applicationId },
   });
   if (error) throw error;
+  void logujAkcje("zatwierdzenie_zgloszenia", { applicationId });
 }
 
 export interface InstruktorRow {
@@ -224,6 +252,7 @@ export async function listInstructors(oskId: string): Promise<InstruktorRow[]> {
 export async function deleteInstructor(id: string): Promise<void> {
   const { error } = await supabase.from("instructor").delete().eq("id", id);
   if (error) throw error;
+  void logujAkcje("usuniecie_instruktora", { instructorId: id });
 }
 
 export async function assignInstructorToCourse(
@@ -256,6 +285,7 @@ export async function updatePayment(
     .update({ payment_status })
     .eq("id", enrollmentId);
   if (error) throw error;
+  void logujAkcje("zmiana_platnosci", { enrollmentId, payment_status });
 }
 
 /** Agregacja prywatnego scoringu instruktorów (R18); RLS zwraca dane tylko adminowi. */
@@ -290,6 +320,7 @@ export async function setClearedToDrive(enrollmentId: string, cleared: boolean):
     .update({ cleared_to_drive: cleared })
     .eq("id", enrollmentId);
   if (error) throw error;
+  void logujAkcje("zmiana_dopuszczenia_do_jazd", { enrollmentId, cleared });
 }
 
 // ---------------------------------------------------------------------------
@@ -667,6 +698,7 @@ export async function resolveGieldaZgloszenie(
     body: { zgloszenieId, decyzja },
   });
   if (error) throw error;
+  void logujAkcje("rozstrzygniecie_gieldy", { zgloszenieId, decyzja });
 }
 
 // ---------------------------------------------------------------------------
@@ -713,4 +745,92 @@ export async function setMyWidgetLayout(oskId: string, uklad: string[]): Promise
     .from("widget_layout")
     .upsert({ osk_id: oskId, user_id: user.id, uklad, updated_at: new Date().toISOString() });
   if (error) throw error;
+}
+
+// ---------------------------------------------------------------------------
+// Audit log — podgląd dla admina (kto/kiedy zatwierdził/usunął).
+// ---------------------------------------------------------------------------
+
+export interface AuditLogRow {
+  id: string;
+  akcja: string;
+  szczegoly: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export async function listAuditLog(oskId: string): Promise<AuditLogRow[]> {
+  const { data, error } = await supabase
+    .from("admin_audit_log")
+    .select("id, akcja, szczegoly, created_at")
+    .eq("osk_id", oskId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []) as AuditLogRow[];
+}
+
+// ---------------------------------------------------------------------------
+// Ręczna korekta grafiku praktyki — admin widzi i poprawia wszystkie sloty kursu.
+// ---------------------------------------------------------------------------
+
+export interface SlotAdminRow {
+  id: string;
+  enrollment_id: string;
+  instructor_id: string;
+  start_ts: string;
+  end_ts: string;
+  status: string;
+}
+
+export const SLOT_STATUSY = [
+  "zaplanowany",
+  "odbyty",
+  "odwolany_w_oknie",
+  "usprawiedliwiony",
+  "nieusprawiedliwiony",
+  "propozycja",
+  "wolny_gielda",
+] as const;
+
+export async function listCourseSlots(courseId: string): Promise<SlotAdminRow[]> {
+  const { data, error } = await supabase
+    .from("slot")
+    .select("id, enrollment_id, instructor_id, start_ts, end_ts, status")
+    .eq("course_id", courseId)
+    .order("start_ts");
+  if (error) throw error;
+  return (data ?? []) as SlotAdminRow[];
+}
+
+export interface CourseInstructorRow {
+  instructor_id: string;
+  imie: string | null;
+  nazwisko: string | null;
+}
+
+export async function listCourseInstructors(courseId: string): Promise<CourseInstructorRow[]> {
+  const { data, error } = await supabase
+    .from("course_instructor")
+    .select("instructor_id, instructor (imie, nazwisko)")
+    .eq("course_id", courseId);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    instructor_id: r.instructor_id as string,
+    ...(r.instructor as unknown as { imie: string | null; nazwisko: string | null }),
+  }));
+}
+
+export async function updateSlotAdmin(
+  slotId: string,
+  zmiany: Partial<Pick<SlotAdminRow, "instructor_id" | "start_ts" | "end_ts" | "status">>,
+): Promise<void> {
+  const { error } = await supabase.from("slot").update(zmiany).eq("id", slotId);
+  if (error) throw error;
+  void logujAkcje("edycja_slotu", { slotId, zmiany });
+}
+
+export async function deleteSlotAdmin(slotId: string): Promise<void> {
+  const { error } = await supabase.from("slot").delete().eq("id", slotId);
+  if (error) throw error;
+  void logujAkcje("usuniecie_slotu", { slotId });
 }

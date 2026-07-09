@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KalendarzMiesieczny, type WydarzenieKalendarza } from "@/components/ui/calendar-month";
 import { GieldaQueueSection } from "./GieldaQueueSection";
+import { SlotsAdminSection } from "./SlotsAdminSection";
 import {
   closeEnrollment,
   generatePracticeSchedule,
@@ -159,6 +160,7 @@ export function CourseDetail() {
         </CardContent>
       </Card>
 
+      <SlotsAdminSection courseId={courseId!} />
       <GieldaQueueSection courseId={courseId!} />
     </div>
   );

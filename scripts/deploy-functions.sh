@@ -16,13 +16,14 @@ REF="${PROJECT_REF:-qlpqmkqbimdwokeofyqq}"
 SB="${SUPABASE:-supabase}"
 : "${SUPABASE_ACCESS_TOKEN:?Ustaw SUPABASE_ACCESS_TOKEN (token z dashboardu)}"
 
-# submit-application jest publiczna (bez JWT); reszta wymaga zalogowania.
-PUBLICZNE="submit-application"
+# submit-application jest publiczna (bez JWT); send-reminders woła pg_cron
+# (bez sesji użytkownika); reszta wymaga zalogowania.
+PUBLICZNE="submit-application send-reminders"
 
 for dir in supabase/functions/*/; do
   fn="$(basename "$dir")"
   [ "$fn" = "_shared" ] && continue
-  if [ "$fn" = "$PUBLICZNE" ]; then
+  if echo " $PUBLICZNE " | grep -q " $fn "; then
     echo "== $fn (--no-verify-jwt) =="
     "$SB" functions deploy "$fn" --no-verify-jwt --project-ref "$REF"
   else
