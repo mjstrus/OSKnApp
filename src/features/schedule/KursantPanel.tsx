@@ -3,8 +3,6 @@ import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { BookOpen, CalendarDays, HelpCircle, MessageCircle, Repeat, Trophy, User } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AppShell, type NavItem } from "@/app/AppShell";
-import { HoursProgress } from "@/features/progress/HoursProgress";
-import { TheoryProgress } from "@/features/progress/TheoryProgress";
 import { SimulationSection } from "@/features/learning/SimulationSection";
 import { RankingSection } from "@/features/leaderboard/RankingSection";
 import { ChatSection } from "@/features/chat/ChatSection";
@@ -105,9 +103,7 @@ export function KursantPanel() {
             path="terminarz"
             element={
               <div className="space-y-6">
-                <HoursProgress stan={ctx.stan} />
-                <TheoryProgress courseId={ctx.courseId} />
-                <TheorySchedule courseId={ctx.courseId} />
+                <TheorySchedule courseId={ctx.courseId} mojeSloty={ctx.mojeSloty} />
                 <PracticeSchedule enrollmentId={ctx.enrollmentId} />
                 <BookingView
                   clearedToDrive={ctx.clearedToDrive}

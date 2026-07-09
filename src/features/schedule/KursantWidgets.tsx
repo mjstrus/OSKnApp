@@ -1,6 +1,11 @@
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { HoursProgress } from "@/features/progress/HoursProgress";
+import { TheoryProgress } from "@/features/progress/TheoryProgress";
 import { getCourse, listTheorySessions } from "@/features/admin/api";
+import { listGielda } from "./api";
 import type { KursantContext } from "./api";
 
 // Statyczne widgety boczne kursanta — dane już wczytane w ctx, zero dodatkowych
@@ -18,7 +23,18 @@ export function KursantWidgetLeft({ ctx }: { ctx: KursantContext }) {
         </CardContent>
       </Card>
       <TerminZakonczeniaWidget ctx={ctx} />
+      <PraktykaProgressWidget ctx={ctx} />
     </div>
+  );
+}
+
+function PraktykaProgressWidget({ ctx }: { ctx: KursantContext }) {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <HoursProgress stan={ctx.stan} />
+      </CardContent>
+    </Card>
   );
 }
 
@@ -96,6 +112,42 @@ export function KursantWidgetRight({ ctx }: { ctx: KursantContext }) {
           </CardTitle>
         </CardHeader>
       </Card>
+      <GieldaWidget courseId={ctx.courseId} />
+      <TeoriaProgressWidget ctx={ctx} />
     </div>
+  );
+}
+
+function GieldaWidget({ courseId }: { courseId: string }) {
+  const [liczba, setLiczba] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    void listGielda(courseId).then((g) => setLiczba(g.length));
+  }, [courseId]);
+
+  return (
+    <Link to="/panel/gielda" className="block">
+      <Card className={cn("transition-colors hover:bg-[var(--muted)]", liczba && liczba > 0 && "border-[var(--destructive)]")}>
+        <CardHeader>
+          <CardDescription>Nowe terminy na giełdzie</CardDescription>
+          <CardTitle className={cn("text-2xl", liczba && liczba > 0 && "text-[var(--destructive)]")}>
+            {liczba ?? "…"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-xs text-[var(--muted-foreground)]">
+          {liczba && liczba > 0 ? "Jest coś do wzięcia" : "Brak wolnych terminów"}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
+function TeoriaProgressWidget({ ctx }: { ctx: KursantContext }) {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <TheoryProgress courseId={ctx.courseId} />
+      </CardContent>
+    </Card>
   );
 }
