@@ -9,8 +9,8 @@ interface Props {
   onFinish: (wynik: WynikPodejscia, odpowiedzi: Record<string, string>) => void;
 }
 
-const OPCJE_PODSTAWOWE = ["TAK", "NIE"];
-const OPCJE_SPECJALISTYCZNE = ["A", "B", "C"];
+export const OPCJE_PODSTAWOWE = ["TAK", "NIE"];
+export const OPCJE_SPECJALISTYCZNE = ["A", "B", "C"];
 
 function mmss(sek: number): string {
   const m = Math.floor(sek / 60);

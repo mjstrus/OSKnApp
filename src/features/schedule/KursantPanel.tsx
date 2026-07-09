@@ -4,6 +4,7 @@ import { BookOpen, CalendarDays, HelpCircle, MessageCircle, Repeat, Trophy, User
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AppShell, type NavItem } from "@/app/AppShell";
 import { SimulationSection } from "@/features/learning/SimulationSection";
+import { TheoryPractice } from "@/features/learning/TheoryPractice";
 import { RankingSection } from "@/features/leaderboard/RankingSection";
 import { ChatSection } from "@/features/chat/ChatSection";
 import { BookingView } from "./BookingView";
@@ -19,7 +20,15 @@ import type { SlotDoRezerwacji, SlotView } from "./types";
 const NAV: NavItem[] = [
   { to: "/panel/terminarz", label: "Terminarz", icon: CalendarDays },
   { to: "/panel/gielda", label: "Giełda", icon: Repeat },
-  { to: "/panel/nauka", label: "Nauka", icon: BookOpen },
+  {
+    to: "/panel/nauka/testy",
+    label: "Nauka",
+    icon: BookOpen,
+    submenu: [
+      { to: "/panel/nauka/teoria", label: "Teoria" },
+      { to: "/panel/nauka/testy", label: "Testy" },
+    ],
+  },
   { to: "/panel/ranking", label: "Ranking", icon: Trophy },
   { to: "/panel/chat", label: "Chat", icon: MessageCircle },
 ];
@@ -119,8 +128,10 @@ export function KursantPanel() {
             path="gielda"
             element={<GieldaSection courseId={ctx.courseId} enrollmentId={ctx.enrollmentId} />}
           />
+          <Route path="nauka" element={<Navigate to="testy" replace />} />
+          <Route path="nauka/teoria" element={<TheoryPractice kategoria={ctx.kategoria} />} />
           <Route
-            path="nauka"
+            path="nauka/testy"
             element={
               <SimulationSection
                 oskId={oskId!}
