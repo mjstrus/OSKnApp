@@ -1,0 +1,4 @@
+# Minimalna konfiguracja Supabase CLI.
+# Pełny plik wygeneruje `supabase init`; do `supabase link` + `supabase db push`
+# wystarczy project_id.
+project_id = "osknapp"
