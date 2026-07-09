@@ -2,10 +2,11 @@ import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { AvailabilitySection } from "./AvailabilitySection";
 import { deleteMyData, exportMyData } from "./api";
 
-/** RODO: eksport i usunięcie własnych danych na żądanie. */
-export function MyDataSection() {
+/** RODO (eksport/usunięcie danych) + dostępność na jazdy — oba "moje ustawienia" kursanta. */
+export function MyDataSection({ enrollmentId }: { enrollmentId: string }) {
   const { oskId, signOut } = useAuth();
   const [blad, setBlad] = React.useState<string | null>(null);
 
@@ -38,25 +39,29 @@ export function MyDataSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Moje dane</CardTitle>
-        <CardDescription>RODO: pobierz kopię swoich danych albo poproś o ich usunięcie.</CardDescription>
-      </CardHeader>
-      <CardContent className="flex gap-2">
-        <Button size="sm" variant="outline" onClick={() => void eksportuj()}>
-          Eksportuj dane
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="border-[var(--destructive)] text-[var(--destructive)]"
-          onClick={() => void usun()}
-        >
-          Usuń moje dane
-        </Button>
-        {blad && <p className="text-sm text-[var(--destructive)]">{blad}</p>}
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <AvailabilitySection oskId={oskId!} enrollmentId={enrollmentId} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Moje dane</CardTitle>
+          <CardDescription>RODO: pobierz kopię swoich danych albo poproś o ich usunięcie.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => void eksportuj()}>
+            Eksportuj dane
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-[var(--destructive)] text-[var(--destructive)]"
+            onClick={() => void usun()}
+          >
+            Usuń moje dane
+          </Button>
+          {blad && <p className="text-sm text-[var(--destructive)]">{blad}</p>}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

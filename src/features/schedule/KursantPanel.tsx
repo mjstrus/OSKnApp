@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
-import { BookOpen, CalendarDays, HelpCircle, MessageCircle, Trophy, User } from "lucide-react";
+import { BookOpen, CalendarDays, HelpCircle, MessageCircle, Repeat, Trophy, User } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { AppShell, type NavItem } from "@/app/AppShell";
 import { HoursProgress } from "@/features/progress/HoursProgress";
@@ -10,7 +10,7 @@ import { RankingSection } from "@/features/leaderboard/RankingSection";
 import { ChatSection } from "@/features/chat/ChatSection";
 import { BookingView } from "./BookingView";
 import { PracticeSchedule } from "./PracticeSchedule";
-import { AvailabilitySection } from "./AvailabilitySection";
+import { GieldaSection } from "./GieldaSection";
 import { TheorySchedule } from "./TheorySchedule";
 import { MyDataSection } from "./MyDataSection";
 import { KursantHelpSection } from "./KursantHelpSection";
@@ -20,6 +20,7 @@ import type { SlotDoRezerwacji, SlotView } from "./types";
 
 const NAV: NavItem[] = [
   { to: "/panel/terminarz", label: "Terminarz", icon: CalendarDays },
+  { to: "/panel/gielda", label: "Giełda", icon: Repeat },
   { to: "/panel/nauka", label: "Nauka", icon: BookOpen },
   { to: "/panel/ranking", label: "Ranking", icon: Trophy },
   { to: "/panel/chat", label: "Chat", icon: MessageCircle },
@@ -107,8 +108,7 @@ export function KursantPanel() {
                 <HoursProgress stan={ctx.stan} />
                 <TheoryProgress courseId={ctx.courseId} />
                 <TheorySchedule courseId={ctx.courseId} />
-                <PracticeSchedule enrollmentId={ctx.enrollmentId} courseId={ctx.courseId} />
-                <AvailabilitySection oskId={oskId!} enrollmentId={ctx.enrollmentId} />
+                <PracticeSchedule enrollmentId={ctx.enrollmentId} />
                 <BookingView
                   clearedToDrive={ctx.clearedToDrive}
                   dostepneSloty={ctx.dostepneSloty}
@@ -118,6 +118,10 @@ export function KursantPanel() {
                 />
               </div>
             }
+          />
+          <Route
+            path="gielda"
+            element={<GieldaSection courseId={ctx.courseId} enrollmentId={ctx.enrollmentId} />}
           />
           <Route
             path="nauka"
@@ -134,7 +138,7 @@ export function KursantPanel() {
             element={<RankingSection courseId={ctx.courseId} mojEnrollmentId={ctx.enrollmentId} />}
           />
           <Route path="chat" element={<ChatSection oskId={oskId!} />} />
-          <Route path="dane" element={<MyDataSection />} />
+          <Route path="dane" element={<MyDataSection enrollmentId={ctx.enrollmentId} />} />
           <Route path="pomoc" element={<KursantHelpSection />} />
         </Routes>
       </div>

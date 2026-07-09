@@ -1,4 +1,6 @@
+import * as React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCourse, listTheorySessions } from "@/features/admin/api";
 import type { KursantContext } from "./api";
 
 // Statyczne widgety boczne kursanta — dane już wczytane w ctx, zero dodatkowych
@@ -15,7 +17,59 @@ export function KursantWidgetLeft({ ctx }: { ctx: KursantContext }) {
           {ctx.clearedToDrive ? "Dopuszczony do jazd" : "Jeszcze nie dopuszczony do jazd"}
         </CardContent>
       </Card>
+      <TerminZakonczeniaWidget ctx={ctx} />
     </div>
+  );
+}
+
+/**
+ * Szacowany termin zakończenia — projekcja liniowa z realnego tempa (godziny
+ * zrobione / dni od startu), nie ze sztywnego docelowy_czas_dni. Rośnie/maleje
+ * z frekwencją, tak jak prosił user. Za mało danych na start → fallback albo
+ * "za wcześnie".
+ */
+function TerminZakonczeniaWidget({ ctx }: { ctx: KursantContext }) {
+  const [tekst, setTekst] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    void (async () => {
+      const [kurs, sesje] = await Promise.all([
+        getCourse(ctx.courseId),
+        listTheorySessions(ctx.courseId),
+      ]);
+      if (!kurs?.data_poczatku) return setTekst("Brak danych do oszacowania");
+
+      const start = new Date(kurs.data_poczatku).getTime();
+      const dniOdStartu = (Date.now() - start) / 86_400_000;
+      const teoriaOdbyta = sesje
+        .filter((s) => new Date(s.end_ts).getTime() < Date.now())
+        .reduce((s, x) => s + x.liczba_godzin, 0);
+      const zrobione = teoriaOdbyta + ctx.stan.potwierdzone;
+      const cel = kurs.h_teoria + kurs.h_praktyka;
+
+      if (dniOdStartu <= 0 || zrobione <= 0) {
+        return setTekst(
+          kurs.docelowy_czas_dni
+            ? new Date(start + kurs.docelowy_czas_dni * 86_400_000).toLocaleDateString("pl-PL")
+            : "Za wcześnie by oszacować",
+        );
+      }
+      const tempoGodzDzien = zrobione / dniOdStartu;
+      const pozostaleDni = Math.max(0, (cel - zrobione) / tempoGodzDzien);
+      setTekst(new Date(Date.now() + pozostaleDni * 86_400_000).toLocaleDateString("pl-PL"));
+    })();
+  }, [ctx.courseId, ctx.stan.potwierdzone]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardDescription>Szacowany termin zakończenia</CardDescription>
+        <CardTitle className="text-sm font-medium">{tekst ?? "…"}</CardTitle>
+      </CardHeader>
+      <CardContent className="text-xs text-[var(--muted-foreground)]">
+        Estymacja z dotychczasowego tempa — zmienia się z frekwencją.
+      </CardContent>
+    </Card>
   );
 }
 
