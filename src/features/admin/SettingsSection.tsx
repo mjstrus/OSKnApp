@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OskNameForm } from "./OskNameForm";
 import { RoomsSection } from "./RoomsSection";
 import { ErrorLogSection } from "./ErrorLogSection";
@@ -22,6 +23,16 @@ export function SettingsSection({ oskId }: { oskId: string }) {
         }}
       />
       <RoomsSection oskId={oskId} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Grafik teorii</CardTitle>
+          <CardDescription>
+            Grafik teorii generowany jest dziś automatycznie i w całości — bez ręcznej edycji
+            pojedynczych bloków. Jeśli potrzebujesz elastycznego trybu (ręczne przesuwanie zajęć,
+            edycja pojedynczych bloków), daj znać — dodamy to na żądanie.
+          </CardDescription>
+        </CardHeader>
+      </Card>
       <ErrorLogSection oskId={oskId} />
     </div>
   );
