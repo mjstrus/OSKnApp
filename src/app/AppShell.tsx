@@ -1,9 +1,25 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
-import type { LucideIcon } from "lucide-react";
+import { Moon, Sun, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const KLUCZ_MOTYW = "osknapp_theme";
+
+/** Przełącznik jasny/ciemny — motyw aplikowany globalnie klasą .dark na <html>. */
+function useDarkMode() {
+  const [ciemny, setCiemny] = React.useState(() => document.documentElement.classList.contains("dark"));
+
+  function przelacz() {
+    const nowy = !ciemny;
+    setCiemny(nowy);
+    document.documentElement.classList.toggle("dark", nowy);
+    localStorage.setItem(KLUCZ_MOTYW, nowy ? "dark" : "light");
+  }
+
+  return { ciemny, przelacz };
+}
 
 export interface NavItem {
   to: string;
@@ -44,6 +60,7 @@ const sidebarLinkClass = ({ isActive }: { isActive: boolean }) =>
  */
 export function AppShell({ navItems, children, left, right, headerExtra }: Props) {
   const { rola, signOut } = useAuth();
+  const { ciemny, przelacz } = useDarkMode();
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -82,6 +99,9 @@ export function AppShell({ navItems, children, left, right, headerExtra }: Props
           <span className="text-sm font-medium capitalize">{rola}</span>
           <div className="flex items-center gap-2">
             {headerExtra}
+            <Button size="sm" variant="ghost" aria-label="Przełącz tryb ciemny" onClick={przelacz}>
+              {ciemny ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <Button size="sm" variant="ghost" onClick={() => void signOut()}>
               Wyloguj
             </Button>

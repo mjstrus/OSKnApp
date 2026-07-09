@@ -1,8 +1,10 @@
 import * as React from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { BookOpen, CalendarDays, HelpCircle, MessageCircle, Trophy, User } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { AppShell } from "@/app/AppShell";
+import { AppShell, type NavItem } from "@/app/AppShell";
 import { HoursProgress } from "@/features/progress/HoursProgress";
+import { TheoryProgress } from "@/features/progress/TheoryProgress";
 import { SimulationSection } from "@/features/learning/SimulationSection";
 import { RankingSection } from "@/features/leaderboard/RankingSection";
 import { ChatSection } from "@/features/chat/ChatSection";
@@ -11,16 +13,20 @@ import { PracticeSchedule } from "./PracticeSchedule";
 import { AvailabilitySection } from "./AvailabilitySection";
 import { TheorySchedule } from "./TheorySchedule";
 import { MyDataSection } from "./MyDataSection";
+import { KursantHelpSection } from "./KursantHelpSection";
+import { KursantWidgetLeft, KursantWidgetRight } from "./KursantWidgets";
 import { bookSlot, cancelSlot, getKursantContext, type KursantContext } from "./api";
 import type { SlotDoRezerwacji, SlotView } from "./types";
 
-const NAV = [
-  { to: "/panel/terminarz", label: "Terminarz" },
-  { to: "/panel/nauka", label: "Nauka" },
-  { to: "/panel/ranking", label: "Ranking" },
-  { to: "/panel/chat", label: "Chat" },
-  { to: "/panel/dane", label: "Moje dane" },
+const NAV: NavItem[] = [
+  { to: "/panel/terminarz", label: "Terminarz", icon: CalendarDays },
+  { to: "/panel/nauka", label: "Nauka", icon: BookOpen },
+  { to: "/panel/ranking", label: "Ranking", icon: Trophy },
+  { to: "/panel/chat", label: "Chat", icon: MessageCircle },
 ];
+
+const headerIconClass = ({ isActive }: { isActive: boolean }) =>
+  `rounded-md p-2 transition-colors ${isActive ? "bg-[var(--muted)]" : "hover:bg-[var(--muted)]"}`;
 
 export function KursantPanel() {
   const { oskId } = useAuth();
@@ -74,7 +80,21 @@ export function KursantPanel() {
   if (!ctx) return <p className="p-6">Brak aktywnego zapisu na kurs.</p>;
 
   return (
-    <AppShell navItems={NAV}>
+    <AppShell
+      navItems={NAV}
+      headerExtra={
+        <>
+          <NavLink to="/panel/dane" className={headerIconClass} aria-label="Moje dane">
+            <User className="h-4 w-4" />
+          </NavLink>
+          <NavLink to="/panel/pomoc" className={headerIconClass} aria-label="Pomoc">
+            <HelpCircle className="h-4 w-4" />
+          </NavLink>
+        </>
+      }
+      left={<KursantWidgetLeft ctx={ctx} />}
+      right={<KursantWidgetRight ctx={ctx} />}
+    >
       <div className="mx-auto max-w-2xl space-y-4">
         {blad && <p className="text-sm text-[var(--destructive)]">{blad}</p>}
 
@@ -85,6 +105,7 @@ export function KursantPanel() {
             element={
               <div className="space-y-6">
                 <HoursProgress stan={ctx.stan} />
+                <TheoryProgress courseId={ctx.courseId} />
                 <TheorySchedule courseId={ctx.courseId} />
                 <PracticeSchedule enrollmentId={ctx.enrollmentId} courseId={ctx.courseId} />
                 <AvailabilitySection oskId={oskId!} enrollmentId={ctx.enrollmentId} />
@@ -114,6 +135,7 @@ export function KursantPanel() {
           />
           <Route path="chat" element={<ChatSection oskId={oskId!} />} />
           <Route path="dane" element={<MyDataSection />} />
+          <Route path="pomoc" element={<KursantHelpSection />} />
         </Routes>
       </div>
     </AppShell>

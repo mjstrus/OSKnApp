@@ -7,6 +7,10 @@ import { podepnijGlobalnyLogBledow } from "@/lib/errorLog";
 
 podepnijGlobalnyLogBledow();
 
+if (localStorage.getItem("osknapp_theme") === "dark") {
+  document.documentElement.classList.add("dark");
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AuthProvider>
