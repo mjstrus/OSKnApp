@@ -3,19 +3,38 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { OPCJE_PODSTAWOWE, OPCJE_SPECJALISTYCZNE } from "./ExamSimulation";
-import { fetchQuestionBank, type PytanieDB } from "./api";
+import { fetchQuestionBank, savePractice, type PytanieDB } from "./api";
+
+interface Props {
+  oskId: string;
+  enrollmentId: string;
+  kategoria: string;
+}
 
 /** Tryb nauki: bez limitu czasu, cały bank pytań kategorii, natychmiastowy feedback po odpowiedzi. */
-export function TheoryPractice({ kategoria }: { kategoria: string }) {
+export function TheoryPractice({ oskId, enrollmentId, kategoria }: Props) {
   const [pytania, setPytania] = React.useState<PytanieDB[] | null>(null);
   const [odpowiedzi, setOdpowiedzi] = React.useState<Record<string, string>>({});
   const [blad, setBlad] = React.useState<string | null>(null);
+  const [zapisano, setZapisano] = React.useState(false);
 
   async function start() {
     setBlad(null);
     setOdpowiedzi({});
+    setZapisano(false);
     try {
       setPytania(await fetchQuestionBank(kategoria));
+    } catch (e) {
+      setBlad((e as Error).message);
+    }
+  }
+
+  async function zakoncz() {
+    if (!pytania) return;
+    setBlad(null);
+    try {
+      await savePractice({ oskId, enrollmentId, pytania, odpowiedzi });
+      setZapisano(true);
     } catch (e) {
       setBlad((e as Error).message);
     }
@@ -79,6 +98,14 @@ export function TheoryPractice({ kategoria }: { kategoria: string }) {
           </Card>
         );
       })}
+
+      <Card>
+        <CardContent className="flex items-center gap-3 pt-6">
+          <Button onClick={zakoncz}>Zakończ i zapisz postęp</Button>
+          {zapisano && <span className="text-sm text-green-600">Zapisano.</span>}
+          {blad && <p className="text-sm text-[var(--destructive)]">{blad}</p>}
+        </CardContent>
+      </Card>
     </div>
   );
 }

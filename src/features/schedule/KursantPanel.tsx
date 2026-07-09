@@ -25,6 +25,7 @@ const NAV: NavItem[] = [
     label: "Nauka",
     icon: BookOpen,
     submenu: [
+      { to: "/panel/nauka/wyklady", label: "Wykłady" },
       { to: "/panel/nauka/teoria", label: "Teoria" },
       { to: "/panel/nauka/testy", label: "Testy" },
     ],
@@ -129,7 +130,11 @@ export function KursantPanel() {
             element={<GieldaSection courseId={ctx.courseId} enrollmentId={ctx.enrollmentId} />}
           />
           <Route path="nauka" element={<Navigate to="testy" replace />} />
-          <Route path="nauka/teoria" element={<TheoryPractice kategoria={ctx.kategoria} />} />
+          <Route path="nauka/wyklady" element={<TheorySchedule courseId={ctx.courseId} />} />
+          <Route
+            path="nauka/teoria"
+            element={<TheoryPractice oskId={oskId!} enrollmentId={ctx.enrollmentId} kategoria={ctx.kategoria} />}
+          />
           <Route
             path="nauka/testy"
             element={

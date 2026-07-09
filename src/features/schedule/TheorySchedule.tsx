@@ -45,7 +45,8 @@ export function TheorySchedule({ courseId, mojeSloty = [] }: { courseId: string;
       <CardHeader>
         <CardTitle>Grafik</CardTitle>
         <CardDescription>
-          {sesje.length} bloków teorii ({godzinyTeorii}h), {mojeSloty.length} jazd praktycznych
+          {sesje.length} bloków teorii ({godzinyTeorii}h)
+          {mojeSloty.length > 0 && `, ${mojeSloty.length} jazd praktycznych`}
         </CardDescription>
       </CardHeader>
       <CardContent>

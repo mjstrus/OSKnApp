@@ -20,6 +20,44 @@ export async function buildSimulation(kategoria: string): Promise<PytanieDB[]> {
   return dobierzPytania(bank, kategoria) as PytanieDB[];
 }
 
+interface ZapiszPodejscieParams {
+  oskId: string;
+  enrollmentId: string;
+  tryb: "symulacja" | "nauka";
+  pytania: Pytanie[];
+  odpowiedzi: Record<string, string>;
+  punkty: number;
+  maxPkt: number;
+  zaliczony: boolean | null;
+}
+
+async function zapiszPodejscie(p: ZapiszPodejscieParams): Promise<void> {
+  const { data: attempt, error } = await supabase
+    .from("test_attempt")
+    .insert({
+      osk_id: p.oskId,
+      enrollment_id: p.enrollmentId,
+      tryb: p.tryb,
+      punkty: p.punkty,
+      max_pkt: p.maxPkt,
+      zaliczony: p.zaliczony,
+      zakonczono_ts: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+  if (error || !attempt) throw error ?? new Error("Nie zapisano podejścia");
+
+  const answers = p.pytania.map((q) => ({
+    osk_id: p.oskId,
+    attempt_id: attempt.id,
+    question_id: q.id,
+    wybrana_odp: p.odpowiedzi[q.id] ?? null,
+    poprawna: p.odpowiedzi[q.id] === q.poprawna,
+  }));
+  const { error: aErr } = await supabase.from("answer").insert(answers);
+  if (aErr) throw aErr;
+}
+
 /** Zapis podejścia symulacji + odpowiedzi (R16). */
 export async function saveSimulation(params: {
   oskId: string;
@@ -28,28 +66,27 @@ export async function saveSimulation(params: {
   odpowiedzi: Record<string, string>;
   wynik: WynikPodejscia;
 }): Promise<void> {
-  const { data: attempt, error } = await supabase
-    .from("test_attempt")
-    .insert({
-      osk_id: params.oskId,
-      enrollment_id: params.enrollmentId,
-      tryb: "symulacja",
-      punkty: params.wynik.punkty,
-      max_pkt: params.wynik.maxPkt,
-      zaliczony: params.wynik.zaliczony,
-      zakonczono_ts: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-  if (error || !attempt) throw error ?? new Error("Nie zapisano podejścia");
+  await zapiszPodejscie({
+    ...params,
+    tryb: "symulacja",
+    punkty: params.wynik.punkty,
+    maxPkt: params.wynik.maxPkt,
+    zaliczony: params.wynik.zaliczony,
+  });
+}
 
-  const answers = params.pytania.map((q) => ({
-    osk_id: params.oskId,
-    attempt_id: attempt.id,
-    question_id: q.id,
-    wybrana_odp: params.odpowiedzi[q.id] ?? null,
-    poprawna: params.odpowiedzi[q.id] === q.poprawna,
-  }));
-  const { error: aErr } = await supabase.from("answer").insert(answers);
-  if (aErr) throw aErr;
+/** Zapis podejścia trybu nauki — bez limitu czasu, bez progu zaliczenia (nie ma sensu na całym banku). */
+export async function savePractice(params: {
+  oskId: string;
+  enrollmentId: string;
+  pytania: Pytanie[];
+  odpowiedzi: Record<string, string>;
+}): Promise<void> {
+  let punkty = 0;
+  let maxPkt = 0;
+  for (const q of params.pytania) {
+    maxPkt += q.waga;
+    if (params.odpowiedzi[q.id] === q.poprawna) punkty += q.waga;
+  }
+  await zapiszPodejscie({ ...params, tryb: "nauka", punkty, maxPkt, zaliczony: null });
 }

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { NavLink } from "react-router-dom";
-import { Moon, Sun, type LucideIcon } from "lucide-react";
+import { ChevronRight, Moon, Sun, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -74,15 +74,23 @@ export function AppShell({ navItems, children, left, right, headerExtra }: Props
             <div key={item.to} className="group relative">
               <NavLink to={item.to} className={sidebarLinkClass}>
                 {item.icon && <item.icon className="h-4 w-4" />}
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {item.submenu && item.submenu.length > 0 && (
+                  <ChevronRight className="h-3.5 w-3.5 opacity-60 transition-transform group-hover:translate-x-0.5" />
+                )}
               </NavLink>
               {item.submenu && item.submenu.length > 0 && (
-                <div className="absolute left-full top-0 z-20 ml-1 hidden w-48 flex-col rounded-md border border-[var(--border)] bg-[var(--surface)] p-1 shadow-lg group-hover:flex">
+                <div
+                  className={cn(
+                    "invisible absolute left-full top-0 z-20 ml-1 w-48 origin-left -translate-x-1 scale-95 flex-col rounded-md border border-[var(--border)] bg-[var(--surface)] p-1 opacity-0 shadow-lg transition-all duration-150 ease-out",
+                    "group-hover:visible group-hover:flex group-hover:translate-x-0 group-hover:scale-100 group-hover:opacity-100",
+                  )}
+                >
                   {item.submenu.map((s) => (
                     <NavLink
                       key={s.to}
                       to={s.to}
-                      className="rounded px-2 py-1.5 text-sm text-[var(--foreground)] hover:bg-[var(--muted)]"
+                      className="rounded px-2 py-1.5 text-sm text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
                     >
                       {s.label}
                     </NavLink>
