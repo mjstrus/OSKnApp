@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AdminPanel } from "@/features/admin/AdminPanel";
 import { KursantPanel } from "@/features/schedule/KursantPanel";
 import { InstruktorPanel } from "@/features/schedule/InstruktorPanel";
+import { WykladowcaPanel } from "@/features/schedule/WykladowcaPanel";
 
 function Placeholder({ opis }: { opis: string }) {
   return (
@@ -33,7 +34,7 @@ export function Panel() {
     case "instruktor_2w1":
       return <InstruktorPanel />;
     case "wykladowca":
-      return <Placeholder opis="Harmonogram wykładów teorii (Unit 7)." />;
+      return <WykladowcaPanel />;
     case "kandydat":
       return <Placeholder opis="Twoje zgłoszenie oczekuje na zatwierdzenie." />;
     default:

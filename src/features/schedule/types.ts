@@ -13,6 +13,7 @@ export interface SlotView {
   end_ts: string;
   status: SlotStatus;
   instructor_id: string;
+  enrollment_id?: string;
 }
 
 /** Wolne okno możliwe do rezerwacji (wyliczone przez silnik scheduling). */

@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { TheorySessionZKursem } from "@/features/admin/api";
 import { stanPoczatkowy, zastosujSekwencje } from "@/engine/hours";
 import type { StanKursanta } from "@/engine/types";
 import { wolneSlotyKursanta, zajeteZeSlotow, type GodzinyPracy, type OknoISO } from "./availability";
@@ -145,12 +146,32 @@ export async function getMyInstructorId(oskId: string): Promise<string | null> {
 export async function getInstructorSlots(instructorId: string): Promise<SlotView[]> {
   const { data, error } = await supabase
     .from("slot")
-    .select("id, start_ts, end_ts, status, instructor_id")
+    .select("id, start_ts, end_ts, status, instructor_id, enrollment_id")
     .eq("instructor_id", instructorId)
     .in("status", STATUSY_ROZLICZALNE)
     .order("start_ts");
   if (error) throw error;
   return (data ?? []) as SlotView[];
+}
+
+/** Prywatny scoring instruktora (R18) — instruktor może dodać, nie może odczytać (RLS). */
+export async function submitInstructorFeedback(params: {
+  oskId: string;
+  instructorId: string;
+  enrollmentId?: string;
+  slotId: string;
+  ocena: number;
+  komentarz: string;
+}): Promise<void> {
+  const { error } = await supabase.from("instructor_feedback").insert({
+    osk_id: params.oskId,
+    instructor_id: params.instructorId,
+    enrollment_id: params.enrollmentId ?? null,
+    slot_id: params.slotId,
+    ocena: params.ocena,
+    komentarz: params.komentarz || null,
+  });
+  if (error) throw error;
 }
 
 // ---------------------------------------------------------------------------
@@ -274,6 +295,44 @@ export async function submitInstructorRequest(params: {
     tresc: params.tresc,
   });
   if (error) throw error;
+}
+
+export interface InstructorRequestRow {
+  id: string;
+  typ: string;
+  tresc: string;
+  status: string;
+  created_at: string;
+}
+
+/** Historia własnych zgłoszeń — RLS już pozwala (instructor_request_own_select). */
+export async function listMyInstructorRequests(instructorId: string): Promise<InstructorRequestRow[]> {
+  const { data, error } = await supabase
+    .from("instructor_request")
+    .select("id, typ, tresc, status, created_at")
+    .eq("instructor_id", instructorId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as InstructorRequestRow[];
+}
+
+/** Grafik wykładowcy — wykłady kursów, do których jest przypisany (course_instructor). */
+export async function getInstructorTheorySessions(instructorId: string): Promise<TheorySessionZKursem[]> {
+  const { data: przypisania, error: e1 } = await supabase
+    .from("course_instructor")
+    .select("course_id")
+    .eq("instructor_id", instructorId);
+  if (e1) throw e1;
+  const courseIds = [...new Set((przypisania ?? []).map((p) => p.course_id as string))];
+  if (courseIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("theory_session")
+    .select("id, start_ts, end_ts, liczba_godzin, room (nazwa, adres), course (nazwa)")
+    .in("course_id", courseIds)
+    .order("start_ts");
+  if (error) throw error;
+  return (data ?? []) as unknown as TheorySessionZKursem[];
 }
 
 // ---------------------------------------------------------------------------
