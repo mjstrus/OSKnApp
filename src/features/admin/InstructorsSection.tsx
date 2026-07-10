@@ -48,7 +48,7 @@ export function InstructorsSection({ oskId, kursy }: { oskId: string; kursy: Kur
     setKomunikat(null);
     try {
       await createStaff(d);
-      setKomunikat(`Dodano konto ${d.email}. Może się już zalogować.`);
+      setKomunikat(`Dodano konto ${d.email}. Wysłano link dostępu na e-mail.`);
       await odswiez();
     } catch (e) {
       setBlad((e as Error).message);

@@ -8,11 +8,10 @@ async function wypelnijBazowe(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Nazwisko"), "Nowak");
   await user.type(screen.getByLabelText("Numer legitymacji instruktorskiej"), "LEG/123");
   await user.type(screen.getByLabelText("E-mail"), "instruktor@osk.pl");
-  await user.type(screen.getByLabelText("Hasło początkowe"), "tajne123");
 }
 
 describe("StaffForm (R3)", () => {
-  it("wysyła dane osobowe, e-mail, hasło i rolę", async () => {
+  it("wysyła dane osobowe, e-mail i rolę (bez hasła — link dostępu wysyła Edge Function)", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     render(<StaffForm onSubmit={onSubmit} />);
@@ -23,7 +22,6 @@ describe("StaffForm (R3)", () => {
 
     expect(onSubmit).toHaveBeenCalledWith({
       email: "instruktor@osk.pl",
-      password: "tajne123",
       rola: "wykladowca",
       imie: "Anna",
       nazwisko: "Nowak",
@@ -39,24 +37,9 @@ describe("StaffForm (R3)", () => {
     await user.type(screen.getByLabelText("Imię"), "Anna");
     await user.type(screen.getByLabelText("Nazwisko"), "Nowak");
     await user.type(screen.getByLabelText("E-mail"), "a@b.pl");
-    await user.type(screen.getByLabelText("Hasło początkowe"), "tajne123");
     await user.click(screen.getByRole("button", { name: /dodaj personel/i }));
 
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByText(/podaj numer legitymacji/i)).toBeInTheDocument();
-  });
-
-  it("blokuje za krótkie hasło", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<StaffForm onSubmit={onSubmit} />);
-    await user.type(screen.getByLabelText("Imię"), "Anna");
-    await user.type(screen.getByLabelText("Nazwisko"), "Nowak");
-    await user.type(screen.getByLabelText("Numer legitymacji instruktorskiej"), "LEG/123");
-    await user.type(screen.getByLabelText("E-mail"), "a@b.pl");
-    await user.type(screen.getByLabelText("Hasło początkowe"), "123");
-    await user.click(screen.getByRole("button", { name: /dodaj personel/i }));
-    expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.getByText(/min\. 6/i)).toBeInTheDocument();
   });
 });

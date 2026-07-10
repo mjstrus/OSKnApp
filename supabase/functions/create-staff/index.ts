@@ -2,26 +2,30 @@
 // Edge Function: create-staff — admin dodaje personel (instruktor/wykładowca/2w1)
 //
 // Tworzenie konta wymaga service_role (Admin API), więc idzie przez Edge Function.
-// Admin podaje e-mail + hasło + typ; funkcja zakłada konto, membership i rekord
-// instruktora w OSK wołającego admina. Idempotentnie po e-mailu/membership.
+// Admin podaje e-mail + typ; zamiast wymyślać hasło, funkcja generuje link
+// dostępu (Supabase Admin generateLink) i wysyła go mailem przez Resend —
+// personel sam ustawia hasło po kliknięciu (ResetPasswordPage już to obsługuje,
+// bo link zakłada sesję tak samo jak reset hasła). Idempotentnie po e-mailu/membership.
 //
 // Deploy: supabase functions deploy create-staff
 // ============================================================================
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
+import { wyslijEmail } from "../_shared/email.ts";
 
 type Rola = "instruktor" | "wykladowca" | "instruktor_2w1";
 type Typ = "instruktor_praktyki" | "wykladowca" | "instruktor_2w1";
 
 interface Body {
   email: string;
-  password: string;
   rola: Rola;
   typ?: Typ;
   imie: string;
   nazwisko: string;
   numerLegitymacji: string;
+  /** Origin frontendu wołającego admina — dokąd wraca po ustawieniu hasła. */
+  redirectTo?: string;
 }
 
 const TYP_DOMYSLNY: Record<Rola, Typ> = {
@@ -43,12 +47,9 @@ Deno.serve(async (req: Request) => {
   } catch {
     return json({ error: "Nieprawidłowy JSON" }, 400);
   }
-  const { email, password, rola, imie, nazwisko, numerLegitymacji } = body ?? {};
-  if (!email || !password || !rola || !imie || !nazwisko || !numerLegitymacji) {
-    return json(
-      { error: "Wymagane: email, password, rola, imie, nazwisko, numerLegitymacji" },
-      400,
-    );
+  const { email, rola, imie, nazwisko, numerLegitymacji } = body ?? {};
+  if (!email || !rola || !imie || !nazwisko || !numerLegitymacji) {
+    return json({ error: "Wymagane: email, rola, imie, nazwisko, numerLegitymacji" }, 400);
   }
   if (!TYP_DOMYSLNY[rola]) return json({ error: "Nieprawidłowa rola" }, 400);
 
@@ -74,20 +75,42 @@ Deno.serve(async (req: Request) => {
   if (!adminM) return json({ error: "Wymagane uprawnienia admina" }, 403);
   const oskId = adminM.osk_id as string;
 
-  // Konto: utwórz albo znajdź po e-mailu.
+  // Konto + link dostępu: generateLink 'invite' tworzy konto od razu; jeśli
+  // e-mail już istnieje (ponowne dodanie/literówka poprawiona), fallback na
+  // 'magiclink' — użytkownik i tak dostaje świeży, jednorazowy link logowania.
+  const redirectTo = body.redirectTo || url;
   let userId: string | undefined;
-  const { data: created, error: cErr } = await db.auth.admin.createUser({
+  let actionLink: string | undefined;
+
+  const { data: invite, error: inviteErr } = await db.auth.admin.generateLink({
+    type: "invite",
     email,
-    password,
-    email_confirm: true,
+    options: { redirectTo },
   });
-  if (created?.user) {
-    userId = created.user.id;
-  } else if (cErr) {
+  if (invite?.user) {
+    userId = invite.user.id;
+    actionLink = invite.properties?.action_link;
+  } else if (inviteErr) {
     const { data: list } = await db.auth.admin.listUsers();
     userId = list?.users.find((u) => u.email === email)?.id;
+    if (userId) {
+      const { data: magic } = await db.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: { redirectTo },
+      });
+      actionLink = magic?.properties?.action_link;
+    }
   }
   if (!userId) return json({ error: "Nie udało się utworzyć konta" }, 400);
+
+  if (actionLink) {
+    await wyslijEmail(
+      email,
+      "Dostęp do OSKnAPP",
+      `<p>Cześć ${imie},</p><p>Dodano Cię do systemu OSKnAPP. Kliknij poniżej, żeby ustawić hasło i się zalogować:</p><p><a href="${actionLink}">Ustaw hasło i zaloguj się</a></p>`,
+    );
+  }
 
   // Membership (idempotentnie).
   let membershipId: string;

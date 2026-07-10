@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 
 export interface DaneStaff {
   email: string;
-  password: string;
   rola: "instruktor" | "wykladowca" | "instruktor_2w1";
   imie: string;
   nazwisko: string;
@@ -24,7 +23,6 @@ export function StaffForm({ onSubmit }: { onSubmit: (d: DaneStaff) => void | Pro
   const [nazwisko, setNazwisko] = React.useState("");
   const [numerLegitymacji, setNumerLegitymacji] = React.useState("");
   const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
   const [rola, setRola] = React.useState<DaneStaff["rola"]>("instruktor");
   const [blad, setBlad] = React.useState<string | null>(null);
 
@@ -34,11 +32,9 @@ export function StaffForm({ onSubmit }: { onSubmit: (d: DaneStaff) => void | Pro
     if (!nazwisko.trim()) return setBlad("Podaj nazwisko");
     if (!numerLegitymacji.trim()) return setBlad("Podaj numer legitymacji instruktorskiej");
     if (!email.trim()) return setBlad("Podaj e-mail");
-    if (password.length < 6) return setBlad("Hasło min. 6 znaków");
     setBlad(null);
     await onSubmit({
       email: email.trim(),
-      password,
       rola,
       imie: imie.trim(),
       nazwisko: nazwisko.trim(),
@@ -48,7 +44,6 @@ export function StaffForm({ onSubmit }: { onSubmit: (d: DaneStaff) => void | Pro
     setNazwisko("");
     setNumerLegitymacji("");
     setEmail("");
-    setPassword("");
   }
 
   return (
@@ -74,15 +69,6 @@ export function StaffForm({ onSubmit }: { onSubmit: (d: DaneStaff) => void | Pro
       <div className="space-y-2">
         <Label htmlFor="s-email">E-mail</Label>
         <Input id="s-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="s-haslo">Hasło początkowe</Label>
-        <Input
-          id="s-haslo"
-          type="text"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="s-rola">Rola</Label>

@@ -225,13 +225,15 @@ export interface EnrollmentRow {
 /** Dodaje personel (konto + membership + instruktor) przez Edge Function. */
 export async function createStaff(payload: {
   email: string;
-  password: string;
   rola: "instruktor" | "wykladowca" | "instruktor_2w1";
   imie: string;
   nazwisko: string;
   numerLegitymacji: string;
 }): Promise<void> {
-  const { error } = await supabase.functions.invoke("create-staff", { body: payload });
+  const redirectTo = `${window.location.origin}/reset-hasla`;
+  const { error } = await supabase.functions.invoke("create-staff", {
+    body: { ...payload, redirectTo },
+  });
   if (error) throw error;
 }
 
