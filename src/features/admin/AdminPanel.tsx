@@ -5,6 +5,7 @@ import { useAuth } from "@/features/auth/AuthProvider";
 import { AppShell, type NavItem } from "@/app/AppShell";
 import { InstructorScoring, type ScoringInstruktora } from "./InstructorScoring";
 import { InstructorsSection } from "./InstructorsSection";
+import { InstructorDetail } from "./InstructorDetail";
 import { CoursesSection } from "./CoursesSection";
 import { CourseDetail } from "./CourseDetail";
 import { CalendarOverview } from "./CalendarOverview";
@@ -40,7 +41,7 @@ const NAV: NavItem[] = [
     icon: UserCog,
     submenu: [
       { to: "/panel/instruktorzy#nowy-instruktor", label: "Dodaj nowego instruktora/wykładowcę" },
-      { to: "/panel/instruktorzy", label: "Sprawdź grafik instruktora" },
+      { to: "/panel/instruktorzy", label: "Lista instruktorów" },
     ],
   },
   { to: "/panel/kursanci", label: "Kursanci", icon: Users },
@@ -124,11 +125,15 @@ export function AdminPanel() {
             element={
               oskId ? (
                 <div className="space-y-6">
-                  <InstructorsSection oskId={oskId} kursy={kursy} />
+                  <InstructorsSection oskId={oskId} />
                   <InstructorScoring pozycje={scoring} />
                 </div>
               ) : null
             }
+          />
+          <Route
+            path="instruktorzy/:instructorId"
+            element={oskId ? <InstructorDetail oskId={oskId} /> : null}
           />
           <Route
             path="kursanci"

@@ -247,6 +247,65 @@ export async function listInstructors(oskId: string): Promise<InstruktorRow[]> {
   return (data ?? []) as InstruktorRow[];
 }
 
+export async function getInstructor(id: string): Promise<InstruktorRow | null> {
+  const { data, error } = await supabase
+    .from("instructor")
+    .select("id, typ, aktywny, imie, nazwisko, numer_legitymacji")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data as InstruktorRow | null;
+}
+
+/** Ustawienia dostępu: aktywny=false blokuje logowanie do OSK (RLS is_member_of po membership zostaje — świadomie prosty przełącznik, nie usuwa konta). */
+export async function setInstructorActive(id: string, aktywny: boolean): Promise<void> {
+  const { error } = await supabase.from("instructor").update({ aktywny }).eq("id", id);
+  if (error) throw error;
+  void logujAkcje("zmiana_aktywnosci_instruktora", { instructorId: id, aktywny });
+}
+
+/** Nowy jednorazowy link logowania na istniejący e-mail (bez tworzenia konta od nowa). */
+export async function resendAccessLink(instructorId: string): Promise<string> {
+  const redirectTo = `${window.location.origin}/reset-hasla`;
+  const { data, error } = await supabase.functions.invoke("resend-access-link", {
+    body: { instructorId, redirectTo },
+  });
+  if (error) throw error;
+  void logujAkcje("wyslanie_linku_dostepu", { instructorId });
+  return (data as { email: string }).email;
+}
+
+export interface InstructorRequestSimple {
+  id: string;
+  typ: string;
+  tresc: string;
+  status: string;
+  created_at: string;
+}
+
+export async function listInstructorRequestsFor(instructorId: string): Promise<InstructorRequestSimple[]> {
+  const { data, error } = await supabase
+    .from("instructor_request")
+    .select("id, typ, tresc, status, created_at")
+    .eq("instructor_id", instructorId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as InstructorRequestSimple[];
+}
+
+export async function getInstructorScore(
+  instructorId: string,
+): Promise<{ srednia: number; liczba: number } | null> {
+  const { data, error } = await supabase
+    .from("instructor_feedback")
+    .select("ocena")
+    .eq("instructor_id", instructorId);
+  if (error) throw error;
+  if (!data || data.length === 0) return null;
+  const suma = data.reduce((s, r) => s + (r.ocena as number), 0);
+  return { srednia: suma / data.length, liczba: data.length };
+}
+
 /**
  * Usuwa instruktora (kaskadowo: godziny pracy, przypisania do kursów, sloty —
  * FK `on delete cascade` z 0001/0003/0005). Nie usuwa konta auth.
