@@ -18,6 +18,16 @@ function mmss(sek: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/** Zdjęcie albo wideo pytania, po rozszerzeniu w URL-u — zero dodatkowego pola w danych. */
+export function MediaPytania({ url }: { url: string }) {
+  const wideo = /\.(mp4|webm)$/i.test(url);
+  return wideo ? (
+    <video src={url} controls className="mb-2 max-h-64 w-full rounded" />
+  ) : (
+    <img src={url} alt="" className="mb-2 max-h-64 w-full rounded object-contain" />
+  );
+}
+
 // Symulacja egzaminu WORD (R16): odwzorowuje limit czasu i punktację silnika.
 export function ExamSimulation({ pytania, config = EGZAMIN_WORD_B, onFinish }: Props) {
   const [odpowiedzi, setOdpowiedzi] = React.useState<Record<string, string>>({});
@@ -58,6 +68,7 @@ export function ExamSimulation({ pytania, config = EGZAMIN_WORD_B, onFinish }: P
 
       {pytania.map((q, i) => {
         const opcje = q.typ === "podstawowe" ? OPCJE_PODSTAWOWE : OPCJE_SPECJALISTYCZNE;
+        const media = (q as Pytanie & { media_url?: string | null }).media_url;
         return (
           <Card key={q.id}>
             <CardHeader>
@@ -66,6 +77,7 @@ export function ExamSimulation({ pytania, config = EGZAMIN_WORD_B, onFinish }: P
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {media && <MediaPytania url={media} />}
               <fieldset className="space-y-1">
                 {opcje.map((o) => (
                   <label key={o} className="flex items-center gap-2 text-sm">

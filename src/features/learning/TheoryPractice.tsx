@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OPCJE_PODSTAWOWE, OPCJE_SPECJALISTYCZNE } from "./ExamSimulation";
+import { MediaPytania, OPCJE_PODSTAWOWE, OPCJE_SPECJALISTYCZNE } from "./ExamSimulation";
 import { fetchQuestionBank, savePractice, type PytanieDB } from "./api";
 
 interface Props {
@@ -68,6 +68,7 @@ export function TheoryPractice({ oskId, enrollmentId, kategoria }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {q.media_url && <MediaPytania url={q.media_url} />}
               <fieldset className="space-y-1">
                 {opcje.map((o) => (
                   <label key={o} className="flex items-center gap-2 text-sm">
