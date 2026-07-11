@@ -145,14 +145,27 @@ function KalendarzTygodniowy({ wydarzenia, odDnia }: { wydarzenia: WydarzenieKal
   );
 }
 
-/** Kalendarz z przełącznikiem miesiąc/tydzień (widok centralny pulpitu admina). */
+/** Kalendarz z przełącznikiem miesiąc/tydzień + przewijaniem do przodu/tyłu (widok centralny pulpitu admina). */
 export function KalendarzPrzelaczany({ wydarzenia }: { wydarzenia: WydarzenieKalendarza[] }) {
   const [tryb, setTryb] = React.useState<"miesiac" | "tydzien">("miesiac");
-  const dzis = new Date();
+  const [punkt, setPunkt] = React.useState(new Date());
+
+  function przesun(kierunek: 1 | -1) {
+    setPunkt((p) => {
+      const d = new Date(p);
+      if (tryb === "miesiac") d.setMonth(d.getMonth() + kierunek);
+      else d.setDate(d.getDate() + kierunek * 7);
+      return d;
+    });
+  }
+
+  const widoczneMiesiac = wydarzenia.filter(
+    (w) => w.data.getFullYear() === punkt.getFullYear() && w.data.getMonth() === punkt.getMonth(),
+  );
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setTryb("miesiac")}
           className={cn(
@@ -171,11 +184,39 @@ export function KalendarzPrzelaczany({ wydarzenia }: { wydarzenia: WydarzenieKal
         >
           Tydzień
         </button>
+        <div className="ml-auto flex items-center gap-1">
+          <button
+            onClick={() => przesun(-1)}
+            aria-label="Poprzedni okres"
+            className="rounded-md px-2 py-1 text-sm hover:bg-[var(--muted)]"
+          >
+            ‹
+          </button>
+          <button
+            onClick={() => setPunkt(new Date())}
+            className="rounded-md px-2 py-1 text-sm hover:bg-[var(--muted)]"
+          >
+            Dziś
+          </button>
+          <button
+            onClick={() => przesun(1)}
+            aria-label="Następny okres"
+            className="rounded-md px-2 py-1 text-sm hover:bg-[var(--muted)]"
+          >
+            ›
+          </button>
+        </div>
       </div>
       {tryb === "miesiac" ? (
-        <KalendarzMiesieczny wydarzenia={wydarzenia} />
+        widoczneMiesiac.length === 0 ? (
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Brak wydarzeń w {MIESIACE[punkt.getMonth()]!.toLowerCase()} {punkt.getFullYear()}.
+          </p>
+        ) : (
+          <KalendarzMiesieczny wydarzenia={widoczneMiesiac} />
+        )
       ) : (
-        <KalendarzTygodniowy wydarzenia={wydarzenia} odDnia={dzis} />
+        <KalendarzTygodniowy wydarzenia={wydarzenia} odDnia={punkt} />
       )}
     </div>
   );
