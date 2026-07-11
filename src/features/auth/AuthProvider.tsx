@@ -8,12 +8,15 @@ export type Rola =
   | "instruktor"
   | "wykladowca"
   | "instruktor_2w1"
-  | "admin";
+  | "admin"
+  | "biuro";
 
 interface AuthState {
   session: Session | null;
   rola: Rola | null;
   oskId: string | null;
+  /** Tylko rola='biuro' — nazwy zakładek NAV, do których ma dostęp (patrz SEKCJE_ADMINA). */
+  uprawnienia: string[];
   loading: boolean;
   signOut: () => Promise<void>;
 }
@@ -24,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = React.useState<Session | null>(null);
   const [rola, setRola] = React.useState<Rola | null>(null);
   const [oskId, setOskId] = React.useState<string | null>(null);
+  const [uprawnienia, setUprawnienia] = React.useState<string[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -38,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!session) {
         setRola(null);
         setOskId(null);
+        setUprawnienia([]);
         setLoading(false);
         return;
       }
@@ -45,10 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // RLS: użytkownik czyta własne membershipy (0002). MVP: bierzemy pierwszy.
       const { data } = await supabase
         .from("membership")
-        .select("osk_id, rola")
+        .select("osk_id, rola, uprawnienia")
         .limit(1)
         .maybeSingle();
       if (anulowane) return;
+      setUprawnienia((data?.uprawnienia as string[] | undefined) ?? []);
       setRola((data?.rola as Rola) ?? null);
       setOskId((data?.osk_id as string) ?? null);
       setLoading(false);
@@ -67,7 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ session, rola, oskId, loading, signOut }}>
+    <AuthContext.Provider value={{ session, rola, oskId, uprawnienia, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

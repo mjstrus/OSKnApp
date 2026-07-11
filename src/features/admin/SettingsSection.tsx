@@ -4,6 +4,7 @@ import { OskNameForm } from "./OskNameForm";
 import { RoomsSection } from "./RoomsSection";
 import { ErrorLogSection } from "./ErrorLogSection";
 import { AdminAuditLogSection } from "./AdminAuditLogSection";
+import { StaffPermissionsSection } from "./StaffPermissionsSection";
 import { getOskName, updateOskName } from "./api";
 
 // Charakterystyka OSK: nazwa, sale wykładowe. Flota ma własną zakładkę w sidebarze.
@@ -24,6 +25,7 @@ export function SettingsSection({ oskId }: { oskId: string }) {
         }}
       />
       <RoomsSection oskId={oskId} />
+      <StaffPermissionsSection oskId={oskId} />
       <Card>
         <CardHeader>
           <CardTitle>Grafik teorii</CardTitle>

@@ -225,16 +225,59 @@ export interface EnrollmentRow {
 /** Dodaje personel (konto + membership + instruktor) przez Edge Function. */
 export async function createStaff(payload: {
   email: string;
-  rola: "instruktor" | "wykladowca" | "instruktor_2w1";
+  rola: "instruktor" | "wykladowca" | "instruktor_2w1" | "biuro";
   imie: string;
   nazwisko: string;
-  numerLegitymacji: string;
+  numerLegitymacji?: string;
+  /** Tylko rola='biuro' — nazwy zakładek NAV, do których pracownik ma dostęp. */
+  uprawnienia?: string[];
 }): Promise<void> {
   const redirectTo = `${window.location.origin}/reset-hasla`;
   const { error } = await supabase.functions.invoke("create-staff", {
     body: { ...payload, redirectTo },
   });
   if (error) throw error;
+}
+
+/** Sekcje NAV admina, do których biuro może dostać dostęp — klucz = segment ścieżki /panel/:segment. */
+export const SEKCJE_ADMINA: { klucz: string; label: string }[] = [
+  { klucz: "kalendarz", label: "Kalendarz" },
+  { klucz: "kursy", label: "Kursy" },
+  { klucz: "instruktorzy", label: "Instruktorzy" },
+  { klucz: "kursanci", label: "Kursanci" },
+  { klucz: "flota", label: "Flota" },
+  { klucz: "ustawienia", label: "Ustawienia" },
+];
+
+export interface StaffRow {
+  id: string;
+  imie: string | null;
+  nazwisko: string | null;
+  uprawnienia: string[];
+}
+
+/** Personel biurowy (rola 'biuro') — bez rekordu instruktora, dane na membership. */
+export async function listStaff(oskId: string): Promise<StaffRow[]> {
+  const { data, error } = await supabase
+    .from("membership")
+    .select("id, imie, nazwisko, uprawnienia")
+    .eq("osk_id", oskId)
+    .eq("rola", "biuro")
+    .order("created_at");
+  if (error) throw error;
+  return (data ?? []) as StaffRow[];
+}
+
+export async function updateStaffPermissions(membershipId: string, uprawnienia: string[]): Promise<void> {
+  const { error } = await supabase.from("membership").update({ uprawnienia }).eq("id", membershipId);
+  if (error) throw error;
+  void logujAkcje("zmiana_uprawnien_biura", { membershipId, uprawnienia });
+}
+
+export async function deleteStaff(membershipId: string): Promise<void> {
+  const { error } = await supabase.from("membership").delete().eq("id", membershipId);
+  if (error) throw error;
+  void logujAkcje("usuniecie_pracownika_biura", { membershipId });
 }
 
 export async function listInstructors(oskId: string): Promise<InstruktorRow[]> {

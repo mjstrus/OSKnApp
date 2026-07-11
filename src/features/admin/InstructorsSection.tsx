@@ -60,8 +60,10 @@ export function InstructorsSection({ oskId }: { oskId: string }) {
       <InstructorRequestsSection oskId={oskId} />
       <Card id="nowy-instruktor">
         <CardHeader>
-          <CardTitle>Nowy instruktor / wykładowca</CardTitle>
-          <CardDescription>Tworzy konto i przypisuje rolę w OSK (R3).</CardDescription>
+          <CardTitle>Nowy pracownik</CardTitle>
+          <CardDescription>
+            Instruktor, wykładowca, 2w1 albo pracownik biurowy — tworzy konto i wysyła link dostępu.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <StaffForm onSubmit={dodaj} />

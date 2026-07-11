@@ -27,6 +27,7 @@ export function Panel() {
 
   switch (rola) {
     case "admin":
+    case "biuro":
       return <AdminPanel />;
     case "kursant":
       return <KursantPanel />;

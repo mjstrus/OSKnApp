@@ -1,11 +1,14 @@
 // ============================================================================
-// Edge Function: create-staff — admin dodaje personel (instruktor/wykładowca/2w1)
+// Edge Function: create-staff — admin dodaje personel (instruktor/wykładowca/
+// 2w1/biuro)
 //
 // Tworzenie konta wymaga service_role (Admin API), więc idzie przez Edge Function.
 // Admin podaje e-mail + typ; zamiast wymyślać hasło, funkcja generuje link
 // dostępu (Supabase Admin generateLink) i wysyła go mailem przez Resend —
 // personel sam ustawia hasło po kliknięciu (ResetPasswordPage już to obsługuje,
 // bo link zakłada sesję tak samo jak reset hasła). Idempotentnie po e-mailu/membership.
+// 'biuro' (pracownik biurowy) nie ma rekordu instruktora — dane osobowe i
+// uprawnienia (lista nazw zakładek) trzymane bezpośrednio na membership.
 //
 // Deploy: supabase functions deploy create-staff
 // ============================================================================
@@ -14,7 +17,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { wyslijEmail } from "../_shared/email.ts";
 
-type Rola = "instruktor" | "wykladowca" | "instruktor_2w1";
+type Rola = "instruktor" | "wykladowca" | "instruktor_2w1" | "biuro";
 type Typ = "instruktor_praktyki" | "wykladowca" | "instruktor_2w1";
 
 interface Body {
@@ -23,12 +26,14 @@ interface Body {
   typ?: Typ;
   imie: string;
   nazwisko: string;
-  numerLegitymacji: string;
+  numerLegitymacji?: string;
+  /** Tylko dla rola='biuro' — nazwy zakładek, do których ma dostęp w UI. */
+  uprawnienia?: string[];
   /** Origin frontendu wołającego admina — dokąd wraca po ustawieniu hasła. */
   redirectTo?: string;
 }
 
-const TYP_DOMYSLNY: Record<Rola, Typ> = {
+const TYP_DOMYSLNY: Partial<Record<Rola, Typ>> = {
   instruktor: "instruktor_praktyki",
   wykladowca: "wykladowca",
   instruktor_2w1: "instruktor_2w1",
@@ -48,10 +53,13 @@ Deno.serve(async (req: Request) => {
     return json({ error: "Nieprawidłowy JSON" }, 400);
   }
   const { email, rola, imie, nazwisko, numerLegitymacji } = body ?? {};
-  if (!email || !rola || !imie || !nazwisko || !numerLegitymacji) {
-    return json({ error: "Wymagane: email, rola, imie, nazwisko, numerLegitymacji" }, 400);
+  if (!email || !rola || !imie || !nazwisko) {
+    return json({ error: "Wymagane: email, rola, imie, nazwisko" }, 400);
   }
-  if (!TYP_DOMYSLNY[rola]) return json({ error: "Nieprawidłowa rola" }, 400);
+  if (rola !== "biuro") {
+    if (!numerLegitymacji) return json({ error: "Wymagany numer legitymacji" }, 400);
+    if (!TYP_DOMYSLNY[rola]) return json({ error: "Nieprawidłowa rola" }, 400);
+  }
 
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -112,7 +120,15 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Membership (idempotentnie).
+  // Membership (idempotentnie). 'biuro' trzyma dane osobowe i uprawnienia
+  // bezpośrednio tutaj (brak rekordu instruktora).
+  const membershipPola: Record<string, unknown> = { rola };
+  if (rola === "biuro") {
+    membershipPola.imie = imie;
+    membershipPola.nazwisko = nazwisko;
+    membershipPola.uprawnienia = body.uprawnienia ?? [];
+  }
+
   let membershipId: string;
   const { data: istn } = await db
     .from("membership")
@@ -122,20 +138,24 @@ Deno.serve(async (req: Request) => {
     .maybeSingle();
   if (istn) {
     membershipId = istn.id as string;
-    await db.from("membership").update({ rola }).eq("id", membershipId);
+    await db.from("membership").update(membershipPola).eq("id", membershipId);
   } else {
     const { data: m, error: mErr } = await db
       .from("membership")
-      .insert({ osk_id: oskId, user_id: userId, rola })
+      .insert({ osk_id: oskId, user_id: userId, ...membershipPola })
       .select("id")
       .single();
     if (mErr || !m) return json({ error: mErr?.message ?? "Błąd membership" }, 400);
     membershipId = m.id as string;
   }
 
+  if (rola === "biuro") {
+    return json({ userId, membershipId }, 201);
+  }
+
   // Rekord instruktora (idempotentnie po membership) — dane osobowe zawsze
   // aktualizowane, gdyby admin poprawiał literówkę przy ponownym dodaniu.
-  const typ = body.typ ?? TYP_DOMYSLNY[rola];
+  const typ = body.typ ?? TYP_DOMYSLNY[rola]!;
   const { data: instIstn } = await db
     .from("instructor")
     .select("id")
@@ -151,7 +171,7 @@ Deno.serve(async (req: Request) => {
         typ,
         imie,
         nazwisko,
-        numer_legitymacji: numerLegitymacji,
+        numer_legitymacji: numerLegitymacji!,
       })
       .select("id")
       .single();
@@ -160,7 +180,7 @@ Deno.serve(async (req: Request) => {
   } else {
     await db
       .from("instructor")
-      .update({ typ, imie, nazwisko, numer_legitymacji: numerLegitymacji })
+      .update({ typ, imie, nazwisko, numer_legitymacji: numerLegitymacji! })
       .eq("id", instructorId);
   }
 
