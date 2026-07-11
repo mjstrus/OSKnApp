@@ -9,6 +9,7 @@ import {
   deleteInstructor,
   deleteWorkingHours,
   getInstructor,
+  getInstructorDocLinks,
   getInstructorScore,
   listCourses,
   listInstructorRequestsFor,
@@ -36,24 +37,29 @@ export function InstructorDetail({ oskId }: { oskId: string }) {
   const [godziny, setGodziny] = React.useState<WorkingHoursRow[]>([]);
   const [zgloszenia, setZgloszenia] = React.useState<InstructorRequestSimple[]>([]);
   const [ocena, setOcena] = React.useState<{ srednia: number; liczba: number } | null>(null);
+  const [dokumenty, setDokumenty] = React.useState<{ umowa: string | null; legitymacja: string | null } | null>(
+    null,
+  );
   const [komunikat, setKomunikat] = React.useState<string | null>(null);
   const [blad, setBlad] = React.useState<string | null>(null);
 
   const odswiez = React.useCallback(async () => {
     if (!instructorId) return;
     try {
-      const [inst, k, g, z, o] = await Promise.all([
+      const [inst, k, g, z, o, d] = await Promise.all([
         getInstructor(instructorId),
         listCourses(oskId),
         listWorkingHours(instructorId),
         listInstructorRequestsFor(instructorId),
         getInstructorScore(instructorId),
+        getInstructorDocLinks(instructorId),
       ]);
       setInstruktor(inst);
       setKursy(k);
       setGodziny(g);
       setZgloszenia(z);
       setOcena(o);
+      setDokumenty(d);
     } catch (e) {
       setBlad((e as Error).message);
     }
@@ -174,6 +180,35 @@ export function InstructorDetail({ oskId }: { oskId: string }) {
             </Button>
           </div>
           {komunikat && <p className="text-sm text-green-600">{komunikat}</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dokumenty</CardTitle>
+          <CardDescription>Wgrywa instruktor sam ze swojego panelu.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <span className="w-32">Umowa z OSK</span>
+            {dokumenty?.umowa ? (
+              <a href={dokumenty.umowa} target="_blank" rel="noreferrer" className="text-[var(--primary)] hover:underline">
+                Pobierz
+              </a>
+            ) : (
+              <span className="text-[var(--muted-foreground)]">Brak</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-32">Skan legitymacji</span>
+            {dokumenty?.legitymacja ? (
+              <a href={dokumenty.legitymacja} target="_blank" rel="noreferrer" className="text-[var(--primary)] hover:underline">
+                Pobierz
+              </a>
+            ) : (
+              <span className="text-[var(--muted-foreground)]">Brak</span>
+            )}
+          </div>
         </CardContent>
       </Card>
 

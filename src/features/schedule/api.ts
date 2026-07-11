@@ -297,6 +297,33 @@ export async function submitInstructorRequest(params: {
   if (error) throw error;
 }
 
+const DOC_BUCKET = "instructor-docs";
+
+/** Dokumenty instruktora (umowa, skan legitymacji) — wgrywa sam, bucket prywatny. */
+export async function uploadInstructorDoc(
+  instructorId: string,
+  kind: "umowa" | "legitymacja",
+  file: File,
+): Promise<void> {
+  const ext = file.name.split(".").pop() || "pdf";
+  const path = `${instructorId}/${kind}.${ext}`;
+  const { error: upErr } = await supabase.storage.from(DOC_BUCKET).upload(path, file, { upsert: true });
+  if (upErr) throw upErr;
+  const kolumna = kind === "umowa" ? "umowa_sciezka" : "legitymacja_sciezka";
+  const { error } = await supabase.from("instructor").update({ [kolumna]: path }).eq("id", instructorId);
+  if (error) throw error;
+}
+
+export async function getMyDocStatus(instructorId: string): Promise<{ umowa: boolean; legitymacja: boolean }> {
+  const { data, error } = await supabase
+    .from("instructor")
+    .select("umowa_sciezka, legitymacja_sciezka")
+    .eq("id", instructorId)
+    .maybeSingle();
+  if (error) throw error;
+  return { umowa: !!data?.umowa_sciezka, legitymacja: !!data?.legitymacja_sciezka };
+}
+
 export interface InstructorRequestRow {
   id: string;
   typ: string;

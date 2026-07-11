@@ -4,6 +4,7 @@ import { AppShell } from "@/app/AppShell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { KalendarzMiesieczny, type WydarzenieKalendarza } from "@/components/ui/calendar-month";
 import { getInstructorTheorySessions, getMyInstructorId } from "./api";
+import { InstructorDocsSection } from "./InstructorDocsSection";
 import type { TheorySessionZKursem } from "@/features/admin/api";
 
 function naWydarzenie(s: TheorySessionZKursem): WydarzenieKalendarza {
@@ -18,6 +19,7 @@ function naWydarzenie(s: TheorySessionZKursem): WydarzenieKalendarza {
 export function WykladowcaPanel() {
   const { oskId } = useAuth();
   const [sesje, setSesje] = React.useState<TheorySessionZKursem[] | null>(null);
+  const [instructorId, setInstructorId] = React.useState<string | null>(null);
   const [blad, setBlad] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -25,6 +27,7 @@ export function WykladowcaPanel() {
     void (async () => {
       try {
         const id = await getMyInstructorId(oskId);
+        setInstructorId(id);
         setSesje(id ? await getInstructorTheorySessions(id) : []);
       } catch (e) {
         setBlad((e as Error).message);
@@ -36,6 +39,7 @@ export function WykladowcaPanel() {
     <AppShell navItems={[]}>
       <div className="mx-auto max-w-2xl space-y-4">
         {blad && <p className="text-sm text-[var(--destructive)]">{blad}</p>}
+        {instructorId && <InstructorDocsSection instructorId={instructorId} />}
         <Card>
           <CardHeader>
             <CardTitle>Grafik wykładów</CardTitle>

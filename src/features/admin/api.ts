@@ -257,6 +257,30 @@ export async function getInstructor(id: string): Promise<InstruktorRow | null> {
   return data as InstruktorRow | null;
 }
 
+/** Podpisane linki (5 min) do dokumentów instruktora — bucket prywatny. */
+export async function getInstructorDocLinks(
+  instructorId: string,
+): Promise<{ umowa: string | null; legitymacja: string | null }> {
+  const { data, error } = await supabase
+    .from("instructor")
+    .select("umowa_sciezka, legitymacja_sciezka")
+    .eq("id", instructorId)
+    .maybeSingle();
+  if (error) throw error;
+
+  async function podpisz(sciezka: string | null): Promise<string | null> {
+    if (!sciezka) return null;
+    const { data: signed } = await supabase.storage.from("instructor-docs").createSignedUrl(sciezka, 300);
+    return signed?.signedUrl ?? null;
+  }
+
+  const [umowa, legitymacja] = await Promise.all([
+    podpisz((data?.umowa_sciezka as string | null) ?? null),
+    podpisz((data?.legitymacja_sciezka as string | null) ?? null),
+  ]);
+  return { umowa, legitymacja };
+}
+
 /** Ustawienia dostępu: aktywny=false blokuje logowanie do OSK (RLS is_member_of po membership zostaje — świadomie prosty przełącznik, nie usuwa konta). */
 export async function setInstructorActive(id: string, aktywny: boolean): Promise<void> {
   const { error } = await supabase.from("instructor").update({ aktywny }).eq("id", id);

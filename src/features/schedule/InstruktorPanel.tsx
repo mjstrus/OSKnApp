@@ -7,6 +7,7 @@ import { AttendanceView } from "./AttendanceView";
 import { InstructorRequestForm } from "./InstructorRequestForm";
 import { InstructorRequestHistory } from "./InstructorRequestHistory";
 import { InstructorHelpSection } from "./InstructorHelpSection";
+import { InstructorDocsSection } from "./InstructorDocsSection";
 import { InstructorWidgetLeft, InstructorWidgetRight } from "./InstructorWidgets";
 import {
   confirmAttendance,
@@ -102,6 +103,7 @@ export function InstruktorPanel() {
         ) : (
           <>
             {blad && <p className="text-sm text-[var(--destructive)]">{blad}</p>}
+            {instructorId && <InstructorDocsSection instructorId={instructorId} />}
             <Routes>
               <Route index element={<Navigate to="grafik" replace />} />
               <Route
