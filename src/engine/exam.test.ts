@@ -15,21 +15,25 @@ const pytanie = (typ: Pytanie["typ"], waga: 1 | 2 | 3, poprawna: string, kategor
   poprawna,
 });
 
-// Pula z zapasem: 25 podstawowych + 15 specjalistycznych kat. B (+ trochę kat. A).
+// Pula z zapasem per warstwa wagowa: kat. B ma >=15 pytań każdej wagi każdego
+// typu (WORD potrzebuje max 10), plus trochę kat. A żeby sprawdzić filtrowanie.
 function pula(): Pytanie[] {
   const p: Pytanie[] = [];
-  for (let i = 0; i < 25; i++) p.push(pytanie("podstawowe", ((i % 3) + 1) as 1 | 2 | 3, "TAK"));
-  for (let i = 0; i < 15; i++) p.push(pytanie("specjalistyczne", ((i % 3) + 1) as 1 | 2 | 3, "A"));
+  for (const waga of [1, 2, 3] as const) {
+    for (let i = 0; i < 15; i++) p.push(pytanie("podstawowe", waga, "TAK"));
+    for (let i = 0; i < 15; i++) p.push(pytanie("specjalistyczne", waga, "A"));
+  }
   for (let i = 0; i < 5; i++) p.push(pytanie("podstawowe", 3, "NIE", "A")); // inna kategoria
   return p;
 }
 
-describe("dobierzPytania — dobór wg kategorii i typu (R16)", () => {
-  it("zwraca 20 podstawowych + 12 specjalistycznych (format WORD)", () => {
+describe("dobierzPytania — dobór wg kategorii i warstw wagowych (R16)", () => {
+  it("zwraca 20 podstawowych + 12 specjalistycznych z max 74 pkt (format WORD)", () => {
     const wybrane = dobierzPytania(pula(), "B");
     expect(wybrane).toHaveLength(32);
     expect(wybrane.filter((q) => q.typ === "podstawowe")).toHaveLength(20);
     expect(wybrane.filter((q) => q.typ === "specjalistyczne")).toHaveLength(12);
+    expect(wybrane.reduce((s, q) => s + q.waga, 0)).toBe(74);
   });
 
   it("dobiera tylko pytania żądanej kategorii", () => {
@@ -37,16 +41,16 @@ describe("dobierzPytania — dobór wg kategorii i typu (R16)", () => {
     expect(wybrane.every((q) => q.kategoria === "B")).toBe(true);
   });
 
-  it("rzuca błąd, gdy w puli brakuje pytań danego typu", () => {
+  it("rzuca błąd, gdy w puli brakuje pytań danej wagi", () => {
     const zaMalo = [pytanie("podstawowe", 1, "TAK")];
-    expect(() => dobierzPytania(zaMalo, "B")).toThrow(/pyta|niewystarcz|pul/i);
+    expect(() => dobierzPytania(zaMalo, "B")).toThrow(/pyta|niewystarcz|pul|waz/i);
   });
 
-  it("respektuje konfigurowalny format (inne liczby)", () => {
+  it("respektuje konfigurowalny format (inne warstwy)", () => {
     const wybrane = dobierzPytania(pula(), "B", {
       ...EGZAMIN_WORD_B,
-      liczbaPodstawowych: 5,
-      liczbaSpecjalistycznych: 3,
+      podstawowe: [{ waga: 3, liczba: 2 }, { waga: 1, liczba: 3 }],
+      specjalistyczne: [{ waga: 2, liczba: 3 }],
     });
     expect(wybrane).toHaveLength(8);
   });

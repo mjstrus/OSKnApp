@@ -18,18 +18,38 @@ export interface Pytanie {
   poprawna: string;
 }
 
+/** Warstwa doboru: ile pytań danej wagi wchodzi w skład egzaminu. */
+export interface WarstwaWagowa {
+  waga: Waga;
+  liczba: number;
+}
+
 export interface KonfiguracjaEgzaminu {
-  liczbaPodstawowych: number;
-  liczbaSpecjalistycznych: number;
+  podstawowe: WarstwaWagowa[];
+  specjalistyczne: WarstwaWagowa[];
   progZaliczenia: number;
   maxPkt: number;
   czasSekundy: number;
 }
 
-/** Domyślny format egzaminu teoretycznego kat. B (WORD): 32 pytania, 25 min, 68/74. */
+/**
+ * Domyślny format egzaminu teoretycznego kat. B (WORD): 32 pytania, 25 min, 68/74.
+ * Realna struktura wg rozporządzenia MI (Dz.U.2023.2659, zał. 1) — max 74 pkt
+ * jest STAŁY tylko jeśli losowanie respektuje warstwy wagowe (10×3+6×2+4×1
+ * podstawowe, 6×3+4×2+2×1 specjalistyczne); losowanie "N dowolnych pytań danego
+ * typu" (poprzednia wersja) dawało zmienny, czasem nieosiągalny max.
+ */
 export const EGZAMIN_WORD_B: KonfiguracjaEgzaminu = {
-  liczbaPodstawowych: 20,
-  liczbaSpecjalistycznych: 12,
+  podstawowe: [
+    { waga: 3, liczba: 10 },
+    { waga: 2, liczba: 6 },
+    { waga: 1, liczba: 4 },
+  ],
+  specjalistyczne: [
+    { waga: 3, liczba: 6 },
+    { waga: 2, liczba: 4 },
+    { waga: 1, liczba: 2 },
+  ],
   progZaliczenia: 68,
   maxPkt: 74,
   czasSekundy: 25 * 60,
@@ -53,11 +73,29 @@ function potasuj<T>(arr: readonly T[], rng: () => number): T[] {
   return a;
 }
 
+/** Losuje `liczba` pytań o dokładnie tej wadze z puli — rzuca, gdy pula za mała. */
+function dobierzWarstwe(
+  pula: readonly Pytanie[],
+  { waga, liczba }: WarstwaWagowa,
+  etykietaTypu: string,
+  rng: () => number,
+): Pytanie[] {
+  const wTejWadze = pula.filter((q) => q.waga === waga);
+  if (wTejWadze.length < liczba) {
+    throw new Error(
+      `Za mało pytań ${etykietaTypu} o wadze ${waga}: jest ${wTejWadze.length}, wymagane ${liczba}.`,
+    );
+  }
+  return potasuj(wTejWadze, rng).slice(0, liczba);
+}
+
 /**
- * Dobiera pytania do symulacji wg kategorii i formatu (R16): tyle podstawowych i
- * specjalistycznych, ile w konfiguracji. Losowość przez wstrzykiwalny RNG.
+ * Dobiera pytania do symulacji wg kategorii i warstw wagowych z konfiguracji
+ * (R16) — realna struktura WORD wymaga stałej liczby pytań KAŻDEJ wagi, nie
+ * tylko stałej liczby pytań danego typu, inaczej max punktów jest zmienny
+ * zależnie od losowania. Losowość przez wstrzykiwalny RNG.
  *
- * @throws Error gdy pula nie ma dość pytań danego typu w kategorii.
+ * @throws Error gdy pula nie ma dość pytań danej wagi w kategorii.
  */
 export function dobierzPytania(
   pula: readonly Pytanie[],
@@ -69,20 +107,9 @@ export function dobierzPytania(
   const podstawowe = wKategorii.filter((q) => q.typ === "podstawowe");
   const specjalistyczne = wKategorii.filter((q) => q.typ === "specjalistyczne");
 
-  if (podstawowe.length < config.liczbaPodstawowych) {
-    throw new Error(
-      `Za mało pytań podstawowych kat. ${kategoria}: jest ${podstawowe.length}, wymagane ${config.liczbaPodstawowych}.`,
-    );
-  }
-  if (specjalistyczne.length < config.liczbaSpecjalistycznych) {
-    throw new Error(
-      `Za mało pytań specjalistycznych kat. ${kategoria}: jest ${specjalistyczne.length}, wymagane ${config.liczbaSpecjalistycznych}.`,
-    );
-  }
-
   return [
-    ...potasuj(podstawowe, rng).slice(0, config.liczbaPodstawowych),
-    ...potasuj(specjalistyczne, rng).slice(0, config.liczbaSpecjalistycznych),
+    ...config.podstawowe.flatMap((w) => dobierzWarstwe(podstawowe, w, "podstawowych", rng)),
+    ...config.specjalistyczne.flatMap((w) => dobierzWarstwe(specjalistyczne, w, "specjalistycznych", rng)),
   ];
 }
 
