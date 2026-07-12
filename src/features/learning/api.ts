@@ -1,13 +1,18 @@
 import { supabase } from "@/lib/supabase";
 import { dobierzPytania, type Pytanie, type WynikPodejscia } from "@/engine/exam";
 
-export type PytanieDB = Pytanie & { tresc: string; opcje?: unknown; media_url?: string | null };
+export type PytanieDB = Pytanie & {
+  tresc: string;
+  opcje?: unknown;
+  media_url?: string | null;
+  wyjasnienie?: string | null;
+};
 
 /** Bank pytań danej kategorii (globalny, R16). */
 export async function fetchQuestionBank(kategoria: string): Promise<PytanieDB[]> {
   const { data, error } = await supabase
     .from("question")
-    .select("id, kategoria, typ, waga, poprawna, tresc, opcje, media_url")
+    .select("id, kategoria, typ, waga, poprawna, tresc, opcje, media_url, wyjasnienie")
     .eq("kategoria", kategoria)
     .eq("aktywne", true);
   if (error) throw error;

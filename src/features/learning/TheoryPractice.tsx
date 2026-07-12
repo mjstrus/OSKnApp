@@ -91,11 +91,19 @@ export function TheoryPractice({ oskId, enrollmentId, kategoria }: Props) {
                 ))}
               </fieldset>
               {wybrana && (
-                <p className={cn("mt-2 text-sm", wybrana === q.poprawna ? "text-green-600" : "text-[var(--destructive)]")}>
-                  {wybrana === q.poprawna
-                    ? "Poprawnie."
-                    : `Błędnie — poprawna odpowiedź: ${tekstOpcji(q, q.poprawna)}.`}
-                </p>
+                <>
+                  <p className={cn("mt-2 text-sm", wybrana === q.poprawna ? "text-green-600" : "text-[var(--destructive)]")}>
+                    {wybrana === q.poprawna
+                      ? "Poprawnie."
+                      : `Błędnie — poprawna odpowiedź: ${tekstOpcji(q, q.poprawna)}.`}
+                  </p>
+                  {wybrana !== q.poprawna && q.wyjasnienie && (
+                    <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                      {q.wyjasnienie}
+                      <span className="italic"> (wyjaśnienie generowane automatycznie — do weryfikacji)</span>
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
