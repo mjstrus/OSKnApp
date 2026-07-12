@@ -18,6 +18,13 @@ function mmss(sek: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/** Treść odpowiedzi: dla specjalistycznych z jsonb `opcje` (np. {"A": "..."}), dla podstawowych sama litera (TAK/NIE). */
+export function tekstOpcji(q: { typ: string; opcje?: unknown }, litera: string): string {
+  if (q.typ === "podstawowe") return litera;
+  const opcje = q.opcje as Record<string, string> | null | undefined;
+  return opcje?.[litera] ?? litera;
+}
+
 /** Zdjęcie albo wideo pytania, po rozszerzeniu w URL-u — zero dodatkowego pola w danych. */
 export function MediaPytania({ url }: { url: string }) {
   const wideo = /\.(mp4|webm)$/i.test(url);
@@ -88,7 +95,7 @@ export function ExamSimulation({ pytania, config = EGZAMIN_WORD_B, onFinish }: P
                       checked={odpowiedzi[q.id] === o}
                       onChange={() => setOdpowiedzi((prev) => ({ ...prev, [q.id]: o }))}
                     />
-                    {o}
+                    {tekstOpcji(q, o)}
                   </label>
                 ))}
               </fieldset>

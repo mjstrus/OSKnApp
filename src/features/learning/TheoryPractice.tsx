@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MediaPytania, OPCJE_PODSTAWOWE, OPCJE_SPECJALISTYCZNE } from "./ExamSimulation";
+import { MediaPytania, OPCJE_PODSTAWOWE, OPCJE_SPECJALISTYCZNE, tekstOpcji } from "./ExamSimulation";
 import { fetchQuestionBank, savePractice, type PytanieDB } from "./api";
 
 interface Props {
@@ -85,14 +85,16 @@ export function TheoryPractice({ oskId, enrollmentId, kategoria }: Props) {
                         wybrana === o && o !== q.poprawna && "font-medium text-[var(--destructive)]",
                       )}
                     >
-                      {o}
+                      {tekstOpcji(q, o)}
                     </span>
                   </label>
                 ))}
               </fieldset>
               {wybrana && (
                 <p className={cn("mt-2 text-sm", wybrana === q.poprawna ? "text-green-600" : "text-[var(--destructive)]")}>
-                  {wybrana === q.poprawna ? "Poprawnie." : `Błędnie — poprawna odpowiedź: ${q.poprawna}.`}
+                  {wybrana === q.poprawna
+                    ? "Poprawnie."
+                    : `Błędnie — poprawna odpowiedź: ${tekstOpcji(q, q.poprawna)}.`}
                 </p>
               )}
             </CardContent>
